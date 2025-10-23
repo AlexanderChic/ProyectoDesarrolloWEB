@@ -1,0 +1,247 @@
+-- public.administradores definition
+
+-- Drop table
+
+-- DROP TABLE public.administradores;
+
+CREATE TABLE public.administradores (
+	id int4 DEFAULT nextval('admins_id_seq'::regclass) NOT NULL,
+	nombre varchar(150) NOT NULL,
+	email varchar(100) NOT NULL,
+	"password" varchar(255) NOT NULL,
+	fecha_creacion timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT admins_email_key UNIQUE (email),
+	CONSTRAINT admins_pkey PRIMARY KEY (id)
+);
+
+
+-- public.campañas definition
+
+-- Drop table
+
+-- DROP TABLE public.campañas;
+
+CREATE TABLE public.campañas (
+	id serial4 NOT NULL,
+	nombre varchar(100) NOT NULL,
+	descripcion varchar(255) NULL,
+	color varchar(7) NULL,
+	logo_url varchar(255) NULL,
+	activa bool DEFAULT true NULL,
+	fecha_creacion timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	fecha_inicio timestamp NULL,
+	fecha_fin timestamp NULL,
+	votos_por_votante int4 DEFAULT 1 NULL,
+	estado varchar(20) DEFAULT 'activa'::character varying NULL,
+	titulo varchar(200) NULL,
+	CONSTRAINT campañas_estado_check CHECK (((estado)::text = ANY ((ARRAY['programada'::character varying, 'activa'::character varying, 'finalizada'::character varying])::text[]))),
+	CONSTRAINT campañas_nombre_key UNIQUE (nombre),
+	CONSTRAINT campañas_pkey PRIMARY KEY (id)
+);
+CREATE INDEX "idx_campañas_estado" ON public."campañas" USING btree (estado);
+CREATE INDEX "idx_campañas_fechas" ON public."campañas" USING btree (fecha_inicio, fecha_fin);
+
+
+
+
+
+-- public.candidatos definition
+
+-- Drop table
+
+-- DROP TABLE public.candidatos;
+
+CREATE TABLE public.candidatos (
+	id serial4 NOT NULL,
+	nombre varchar(150) NOT NULL,
+	numero_colegiado varchar(100) NOT NULL,
+	cargo_id int4 NOT NULL,
+	numero_orden int4 NOT NULL,
+	especialidad varchar(100) NULL,
+	foto_url varchar(255) NULL,
+	campaña_id int4 NOT NULL,
+	CONSTRAINT candidatos_pkey PRIMARY KEY (id)
+);
+CREATE INDEX "idx_candidatos_campaña" ON public.candidatos USING btree ("campaña_id");
+
+
+-- public.candidatos foreign keys
+
+ALTER TABLE public.candidatos ADD CONSTRAINT candidatos_campaña_id_fkey FOREIGN KEY (campaña_id) REFERENCES public.campañas(id);
+ALTER TABLE public.candidatos ADD CONSTRAINT candidatos_cargo_id_fkey FOREIGN KEY (cargo_id) REFERENCES public.cargos_directiva(id);
+
+
+
+
+-- public.cargos_directiva definition
+
+-- Drop table
+
+-- DROP TABLE public.cargos_directiva;
+
+CREATE TABLE public.cargos_directiva (
+	id serial4 NOT NULL,
+	nombre varchar(100) NOT NULL,
+	descripcion varchar(255) NULL,
+	orden int4 DEFAULT 0 NULL,
+	CONSTRAINT cargos_directiva_nombre_key UNIQUE (nombre),
+	CONSTRAINT cargos_directiva_pkey PRIMARY KEY (id)
+);
+
+
+
+-- public.categorias definition
+
+-- Drop table
+
+-- DROP TABLE public.categorias;
+
+CREATE TABLE public.categorias (
+	id serial4 NOT NULL,
+	nombre varchar(100) NOT NULL,
+	descripcion varchar(255) NULL,
+	CONSTRAINT categorias_nombre_key UNIQUE (nombre),
+	CONSTRAINT categorias_pkey PRIMARY KEY (id)
+);
+
+
+
+
+
+-- public.departamentos definition
+
+-- Drop table
+
+-- DROP TABLE public.departamentos;
+
+CREATE TABLE public.departamentos (
+	id serial4 NOT NULL,
+	nombre varchar(100) NOT NULL,
+	CONSTRAINT departamentos_nombre_key UNIQUE (nombre),
+	CONSTRAINT departamentos_pkey PRIMARY KEY (id)
+);
+
+
+
+
+
+-- public.ingenieros_colegiados definition
+
+-- Drop table
+
+-- DROP TABLE public.ingenieros_colegiados;
+
+CREATE TABLE public.ingenieros_colegiados (
+	id int4 DEFAULT nextval('usuarios_id_seq'::regclass) NOT NULL,
+	nombre varchar(150) NOT NULL,
+	dpi varchar(13) NOT NULL,
+	email varchar(100) NOT NULL,
+	"password" varchar(255) NOT NULL,
+	departamento_id int4 NOT NULL,
+	municipio_id int4 NOT NULL,
+	ha_votado bool DEFAULT false NULL,
+	fecha_registro timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	numero_colegiado varchar(20) NULL,
+	fecha_nacimiento date NULL,
+	especialidad varchar(100) NULL,
+	CONSTRAINT ingenieros_colegiados_numero_colegiado_key UNIQUE (numero_colegiado),
+	CONSTRAINT usuarios_dpi_key UNIQUE (dpi),
+	CONSTRAINT usuarios_email_key UNIQUE (email),
+	CONSTRAINT usuarios_pkey PRIMARY KEY (id)
+);
+
+
+-- public.ingenieros_colegiados foreign keys
+
+ALTER TABLE public.ingenieros_colegiados ADD CONSTRAINT usuarios_departamento_id_fkey FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id);
+ALTER TABLE public.ingenieros_colegiados ADD CONSTRAINT usuarios_municipio_id_fkey FOREIGN KEY (municipio_id) REFERENCES public.municipios(id);
+
+
+
+
+
+-- public.municipios definition
+
+-- Drop table
+
+-- DROP TABLE public.municipios;
+
+CREATE TABLE public.municipios (
+	id serial4 NOT NULL,
+	nombre varchar(100) NOT NULL,
+	departamento_id int4 NOT NULL,
+	CONSTRAINT municipios_nombre_departamento_id_key UNIQUE (nombre, departamento_id),
+	CONSTRAINT municipios_pkey PRIMARY KEY (id)
+);
+
+
+-- public.municipios foreign keys
+
+ALTER TABLE public.municipios ADD CONSTRAINT municipios_departamento_id_fkey FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id);
+
+
+
+
+
+
+-- public.votos definition
+
+-- Drop table
+
+-- DROP TABLE public.votos;
+
+CREATE TABLE public.votos (
+	id serial4 NOT NULL,
+	ingeniero_id int4 NOT NULL,
+	candidato_id int4 NOT NULL,
+	cargo_id int4 NOT NULL,
+	departamento_id int4 NOT NULL,
+	municipio_id int4 NOT NULL,
+	fecha_voto timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	campaña_id int4 NOT NULL,
+	CONSTRAINT votos_ingeniero_cargo_campaña_key UNIQUE (ingeniero_id, cargo_id, "campaña_id"),
+	CONSTRAINT votos_pkey PRIMARY KEY (id)
+);
+CREATE INDEX "idx_votos_campaña" ON public.votos USING btree ("campaña_id");
+CREATE INDEX "idx_votos_ingeniero_campaña" ON public.votos USING btree (ingeniero_id, "campaña_id");
+
+-- Table Triggers
+
+CREATE TRIGGER "trigger_actualizar_votos_campaña" AFTER
+INSERT
+    ON
+    public.votos FOR EACH ROW EXECUTE FUNCTION "actualizar_votos_campaña"();
+
+
+-- public.votos foreign keys
+
+ALTER TABLE public.votos ADD CONSTRAINT votos_campaña_id_fkey FOREIGN KEY (campaña_id) REFERENCES public.campañas(id);
+ALTER TABLE public.votos ADD CONSTRAINT votos_candidato_id_fkey FOREIGN KEY (candidato_id) REFERENCES public.candidatos(id);
+ALTER TABLE public.votos ADD CONSTRAINT votos_cargo_id_fkey FOREIGN KEY (cargo_id) REFERENCES public.cargos_directiva(id);
+ALTER TABLE public.votos ADD CONSTRAINT votos_departamento_id_fkey FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id);
+ALTER TABLE public.votos ADD CONSTRAINT votos_ingeniero_id_fkey FOREIGN KEY (ingeniero_id) REFERENCES public.ingenieros_colegiados(id);
+ALTER TABLE public.votos ADD CONSTRAINT votos_municipio_id_fkey FOREIGN KEY (municipio_id) REFERENCES public.municipios(id);
+
+
+
+-- public.votos_por_campaña definition
+
+-- Drop table
+
+-- DROP TABLE public.votos_por_campaña;
+
+CREATE TABLE public.votos_por_campaña (
+	id serial4 NOT NULL,
+	ingeniero_id int4 NOT NULL,
+	campaña_id int4 NOT NULL,
+	votos_emitidos int4 DEFAULT 0 NULL,
+	ultima_actualizacion timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT votos_por_campaña_ingeniero_campaña_key UNIQUE (ingeniero_id, "campaña_id"),
+	CONSTRAINT votos_por_campaña_pkey PRIMARY KEY (id)
+);
+
+
+-- public.votos_por_campaña foreign keys
+
+ALTER TABLE public.votos_por_campaña ADD CONSTRAINT votos_por_campaña_campaña_fkey FOREIGN KEY (campaña_id) REFERENCES public.campañas(id);
+ALTER TABLE public.votos_por_campaña ADD CONSTRAINT votos_por_campaña_ingeniero_fkey FOREIGN KEY (ingeniero_id) REFERENCES public.ingenieros_colegiados(id);

@@ -1,0 +1,618 @@
+// ==========================================
+// VARIABLES SASS
+// ==========================================
+$spacing-xs: 0.5rem;
+$spacing-sm: 1rem;
+$spacing-md: 1.5rem;
+$spacing-lg: 2rem;
+$spacing-xl: 3rem;
+$max-width: 1280px;
+
+// ==========================================
+// MIXINS - Reutilización de código
+// ==========================================
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin transition($property: all) {
+  transition: $property 0.3s ease;
+}
+
+// ==========================================
+// LAYOUT PRINCIPAL
+// ==========================================
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// ==========================================
+// NAVBAR - Usando nesting de SASS
+// ==========================================
+.navbar {
+  background: white;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  &-content {
+    max-width: $max-width;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: none;
+
+    svg {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+
+  &-menu {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &-link {
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    color: var(--text-secondary);
+    font-weight: 500;
+    @include transition;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--bg-tertiary);
+      color: var(--primary);
+    }
+
+    &.active {
+      background: var(--primary);
+      color: white;
+    }
+  }
+
+  &-user {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+}
+
+.btn-logout {
+  padding: 0.5rem 1rem;
+  background: var(--danger);
+  color: white;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  @include transition;
+
+  &:hover {
+    background: #DC2626;
+  }
+}
+
+// ==========================================
+// PÁGINAS - CONTENEDOR GENERAL
+// ==========================================
+.page-container {
+  flex: 1;
+  padding: $spacing-lg $spacing-sm;
+  max-width: $max-width;
+  margin: 0 auto;
+  width: 100%;
+}
+
+// ==========================================
+// TARJETAS
+// ==========================================
+.card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+
+  &-header {
+    margin-bottom: $spacing-md;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  &-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  &-subtitle {
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-size: 1rem;
+  }
+}
+
+// ==========================================
+// ALERTS - Mensajes de notificación
+// ==========================================
+.alert {
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: $spacing-md;
+  font-weight: 500;
+
+  &-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #DC2626;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  &-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  &-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #D97706;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  &-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563EB;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+}
+
+// ==========================================
+// FORMULARIOS
+// ==========================================
+.form {
+  &-group {
+    margin-bottom: $spacing-md;
+  }
+
+  &-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+  }
+
+  &-input,
+  &-select,
+  &-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    background: white;
+    color: var(--text-primary);
+    @include transition(border-color);
+
+    &:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+      outline: none;
+    }
+
+    &:disabled {
+      background: var(--bg-tertiary);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  }
+
+  &-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+  }
+
+  &-error {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--danger);
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: $spacing-md;
+  }
+}
+
+// ==========================================
+// BOTONES - Demostración de SASS
+// ==========================================
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  @include transition;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  text-align: center;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &-primary {
+    background: var(--primary);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+  }
+
+  &-secondary {
+    background: var(--text-secondary);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: var(--text-primary);
+    }
+  }
+
+  &-success {
+    background: var(--secondary);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #059669;
+    }
+  }
+
+  &-danger {
+    background: var(--danger);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #DC2626;
+    }
+  }
+
+  &-outline {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+
+    &:hover:not(:disabled) {
+      background: var(--primary);
+      color: white;
+    }
+  }
+
+  &-block {
+    width: 100%;
+  }
+
+  &-lg {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+  }
+
+  &-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+// ==========================================
+// LOGIN/REGISTER - Autenticación
+// ==========================================
+.auth {
+  &-container {
+    min-height: 100vh;
+    @include flex-center;
+    padding: $spacing-lg $spacing-sm;
+  }
+
+  &-card {
+    max-width: 450px;
+    width: 100%;
+  }
+
+  &-icon {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1rem;
+    color: var(--primary);
+  }
+
+  &-links {
+    margin-top: $spacing-md;
+    text-align: center;
+
+    a {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+      @include transition;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// ==========================================
+// UTILIDADES
+// ==========================================
+.text-center {
+  text-align: center;
+}
+
+// ==========================================
+// VOTACIÓN - Sección de votos
+// ==========================================
+.categoria {
+  &-card {
+    border: 3px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: $spacing-md;
+    margin-bottom: $spacing-lg;
+    @include transition;
+
+    &:hover {
+      border-color: var(--primary-light);
+      box-shadow: var(--shadow-md);
+    }
+  }
+
+  &-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-light);
+  }
+}
+
+.candidatos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.candidato {
+  &-card {
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    cursor: pointer;
+    @include transition;
+    background: white;
+
+    &:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    &.selected {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(79, 70, 229, 0.1) 100%);
+      box-shadow: var(--shadow-lg);
+    }
+  }
+
+  &-numero {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+
+  &-nombre {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  &-partido {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+}
+
+.votar-button {
+  position: sticky;
+  bottom: 1rem;
+  width: 100%;
+  max-width: 500px;
+  margin: $spacing-lg auto 0;
+}
+
+// ==========================================
+// DASHBOARD Y RESULTADOS
+// ==========================================
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.stat-card {
+  background: white;
+  border-radius: var(--border-radius);
+  padding: $spacing-md;
+  box-shadow: var(--shadow-md);
+  border-left: 4px solid var(--primary);
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.resultados-categoria {
+  margin-bottom: $spacing-lg;
+}
+
+.resultado {
+  &-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.75rem;
+    @include transition;
+
+    &:hover {
+      background: var(--bg-tertiary);
+      transform: translateX(5px);
+    }
+  }
+
+  &-info {
+    flex: 1;
+  }
+
+  &-nombre {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 1.125rem;
+  }
+
+  &-partido {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  &-votos {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+// ==========================================
+// RESPONSIVE - Media queries
+// ==========================================
+@media (max-width: 768px) {
+  .navbar {
+    &-menu {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .candidatos-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+    padding: $spacing-md;
+  }
+  
+  .page-container {
+    padding: 1rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    &-content {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+  
+  .card-title {
+    font-size: 1.5rem;
+  }
+  
+  .categoria-title {
+    font-size: 1.25rem;
+  }
+}

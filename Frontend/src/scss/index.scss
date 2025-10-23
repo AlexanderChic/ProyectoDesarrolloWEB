@@ -1,0 +1,140 @@
+// ==========================================
+// IMPORTS
+// ==========================================
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+// ==========================================
+// VARIABLES SASS - Demostración de variables
+// ==========================================
+
+// Colores principales
+$primary: #4F46E5;
+$primary-dark: #4338CA;
+$primary-light: #818CF8;
+$secondary: #10B981;
+$danger: #EF4444;
+$warning: #F59E0B;
+$info: #3B82F6;
+
+// Colores de fondo
+$bg-primary: #FFFFFF;
+$bg-secondary: #F9FAFB;
+$bg-tertiary: #F3F4F6;
+
+// Colores de texto
+$text-primary: #111827;
+$text-secondary: #6B7280;
+$text-tertiary: #9CA3AF;
+
+// Bordes
+$border-color: #E5E7EB;
+$border-radius: 0.5rem;
+
+// Sombras
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+// ==========================================
+// RESET - Estilos base
+// ==========================================
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// ==========================================
+// ROOT - Variables CSS (para uso en componentes)
+// ==========================================
+:root {
+  /* Colores principales - Tema Guatemala */
+  --primary: #{$primary};
+  --primary-dark: #{$primary-dark};
+  --primary-light: #{$primary-light};
+  --secondary: #{$secondary};
+  --danger: #{$danger};
+  --warning: #{$warning};
+  --info: #{$info};
+  
+  /* Colores de fondo */
+  --bg-primary: #{$bg-primary};
+  --bg-secondary: #{$bg-secondary};
+  --bg-tertiary: #{$bg-tertiary};
+  
+  /* Colores de texto */
+  --text-primary: #{$text-primary};
+  --text-secondary: #{$text-secondary};
+  --text-tertiary: #{$text-tertiary};
+  
+  /* Bordes */
+  --border-color: #{$border-color};
+  --border-radius: #{$border-radius};
+  
+  /* Sombras */
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-xl: #{$shadow-xl};
+}
+
+// ==========================================
+// BODY
+// ==========================================
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+// ==========================================
+// ROOT CONTAINER
+// ==========================================
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+// ==========================================
+// SCROLLBAR - Demostración de NESTING
+// ==========================================
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: $bg-tertiary;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $primary;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: $primary-dark;
+}
+
+// ==========================================
+// LOADING SPINNER
+// ==========================================
+.spinner {
+  border: 3px solid $bg-tertiary;
+  border-top: 3px solid $primary;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
