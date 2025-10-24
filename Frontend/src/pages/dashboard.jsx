@@ -1,4 +1,4 @@
-//Frontend/src/pages/Dashboard.jsx
+//Frontend/src/pages/dashboard.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../App.css'

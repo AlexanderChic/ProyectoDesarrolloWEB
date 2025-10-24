@@ -36,7 +36,7 @@ function Login({ setToken, setUser }) {
     try {
       console.log('🔐 Intentando login con:', { 
         numero_colegiado: formData.numero_colegiado,
-        dpi: formData.dpi.substring(0, 4) + '***' // Log parcial por seguridad
+        dpi: formData.dpi.substring(0, 4) + '***'
       })
 
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -48,7 +48,11 @@ function Login({ setToken, setUser }) {
       })
 
       const data = await response.json()
-      console.log('📥 Respuesta del servidor:', { success: response.ok, hasToken: !!data.token })
+      console.log('📥 Respuesta del servidor:', { 
+        success: response.ok, 
+        hasToken: !!data.token,
+        esAdmin: data.ingeniero?.es_admin 
+      })
 
       if (!response.ok) {
         throw new Error(data.message || 'Error al iniciar sesión')
@@ -58,14 +62,19 @@ function Login({ setToken, setUser }) {
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.ingeniero))
 
-      console.log('✅ Login exitoso, redirigiendo a campañas...')
-
       // Actualizar estado
       setToken(data.token)
       setUser(data.ingeniero)
 
-      // ✅ CORRECCIÓN: Navegar a /campañas en lugar de /votacion
-      navigate('/campañas')
+      // ✅ VALIDACIÓN DE ROL: Redirigir según el tipo de usuario
+      if (data.ingeniero.es_admin) {
+        console.log('✅ Login ADMIN exitoso, redirigiendo a /admin/dashboard...')
+        navigate('/admin/dashboard')
+      } else {
+        console.log('✅ Login USUARIO exitoso, redirigiendo a /campañas...')
+        navigate('/campañas')
+      }
+
     } catch (err) {
       console.error('❌ Error en login:', err)
       setError(err.message)
