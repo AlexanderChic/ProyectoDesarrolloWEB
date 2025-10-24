@@ -1,4 +1,4 @@
-//Frontend/src/pages/dashboard.jsx
+//Frontend/src/pages/Dashboard.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../App.css'
@@ -9,10 +9,10 @@ function Dashboard({ token }) {
   const navigate = useNavigate()
   const [estadisticas, setEstadisticas] = useState(null)
   const [resultados, setResultados] = useState([])
-  const [resultadosCampañas, setResultadosCampañas] = useState([])
+  const [resultadosCampanas, setResultadosCampanas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [vistaActual, setVistaActual] = useState('cargos') // 'cargos' o 'campañas'
+  const [vistaActual, setVistaActual] = useState('cargos') // 'cargos' o 'campanas'
 
   useEffect(() => {
     if (!token) {
@@ -24,26 +24,38 @@ function Dashboard({ token }) {
 
   const cargarDatos = async () => {
     try {
+      console.log('📊 Cargando datos del dashboard...');
+      
       // Estadísticas generales
+      console.log('🔹 Cargando estadísticas desde:', `${API_URL}/reportes/estadisticas`);
       const resEstadisticas = await fetch(`${API_URL}/reportes/estadisticas`)
+      if (!resEstadisticas.ok) throw new Error(`Error estadísticas: ${resEstadisticas.status}`);
       const dataEstadisticas = await resEstadisticas.json()
+      console.log('✅ Estadísticas cargadas:', dataEstadisticas);
       setEstadisticas(dataEstadisticas)
 
       // Resultados por cargo
+      console.log('🔹 Cargando resultados desde:', `${API_URL}/reportes/resultados`);
       const resResultados = await fetch(`${API_URL}/reportes/resultados`)
+      if (!resResultados.ok) throw new Error(`Error resultados: ${resResultados.status}`);
       const dataResultados = await resResultados.json()
+      console.log('✅ Resultados cargados:', dataResultados.length, 'registros');
       const resultadosAgrupados = agruparPorCargo(dataResultados)
       setResultados(resultadosAgrupados)
 
-      // Resultados por campaña
-      const resCampañas = await fetch(`${API_URL}/reportes/resultados-por-campaña`)
-      const dataCampañas = await resCampañas.json()
-      setResultadosCampañas(dataCampañas)
+      // ✅ CORRECCIÓN: Ruta sin Ñ
+      console.log('🔹 Cargando resultados por campaña desde:', `${API_URL}/reportes/resultados-por-campana`);
+      const resCampanas = await fetch(`${API_URL}/reportes/resultados-por-campana`)
+      if (!resCampanas.ok) throw new Error(`Error campañas: ${resCampanas.status}`);
+      const dataCampanas = await resCampanas.json()
+      console.log('✅ Resultados por campaña cargados:', dataCampanas.length, 'campañas');
+      setResultadosCampanas(dataCampanas)
       
       setLoading(false)
+      setError('') // Limpiar error si todo sale bien
     } catch (err) {
-      console.error('Error al cargar datos:', err)
-      setError('Error al cargar los resultados')
+      console.error('❌ Error al cargar datos del dashboard:', err)
+      setError('Error al cargar los resultados: ' + err.message)
       setLoading(false)
     }
   }
@@ -91,6 +103,11 @@ function Dashboard({ token }) {
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
           </svg>
           <span>{error}</span>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+          <button onClick={cargarDatos} className="btn btn-primary">
+            Intentar de nuevo
+          </button>
         </div>
       </div>
     )
@@ -188,14 +205,14 @@ function Dashboard({ token }) {
             📊 Resultados por Cargo
           </button>
           <button
-            onClick={() => setVistaActual('campañas')}
+            onClick={() => setVistaActual('campanas')}
             style={{
               flex: 1,
               padding: '1rem',
               border: 'none',
               background: 'transparent',
-              borderBottom: vistaActual === 'campañas' ? '3px solid var(--primary)' : 'none',
-              color: vistaActual === 'campañas' ? 'var(--primary)' : 'var(--text-secondary)',
+              borderBottom: vistaActual === 'campanas' ? '3px solid var(--primary)' : 'none',
+              color: vistaActual === 'campanas' ? 'var(--primary)' : 'var(--text-secondary)',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.3s ease'
@@ -242,9 +259,9 @@ function Dashboard({ token }) {
                         className="resultado-item"
                         style={esGanador ? { 
                           background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
-                          borderLeft: `4px solid ${candidato.campaña_color || 'var(--secondary)'}`
+                          borderLeft: `4px solid ${candidato.campana_color || 'var(--secondary)'}`
                         } : {
-                          borderLeft: candidato.campaña_color ? `4px solid ${candidato.campaña_color}` : undefined
+                          borderLeft: candidato.campana_color ? `4px solid ${candidato.campana_color}` : undefined
                         }}
                       >
                         <div className="resultado-info" style={{ flex: '1' }}>
@@ -264,16 +281,16 @@ function Dashboard({ token }) {
                                 GANADOR
                               </div>
                             )}
-                            {candidato.campaña && (
+                            {candidato.campana && (
                               <div style={{ 
-                                backgroundColor: candidato.campaña_color + '20',
-                                color: candidato.campaña_color || '#3B82F6',
+                                backgroundColor: candidato.campana_color + '20',
+                                color: candidato.campana_color || '#3B82F6',
                                 padding: '0.125rem 0.5rem', 
                                 borderRadius: '9999px', 
                                 fontSize: '0.75rem',
                                 fontWeight: '700'
                               }}>
-                                {candidato.campaña}
+                                {candidato.campana}
                               </div>
                             )}
                           </div>
@@ -297,7 +314,7 @@ function Dashboard({ token }) {
                             <div style={{ 
                               width: `${porcentaje}%`, 
                               height: '100%', 
-                              background: candidato.campaña_color || (esGanador ? 'var(--secondary)' : 'var(--primary)'),
+                              background: candidato.campana_color || (esGanador ? 'var(--secondary)' : 'var(--primary)'),
                               transition: 'width 0.5s ease'
                             }}></div>
                           </div>
@@ -344,13 +361,13 @@ function Dashboard({ token }) {
       )}
 
       {/* Vista de resultados por campañas */}
-      {vistaActual === 'campañas' && (
+      {vistaActual === 'campanas' && (
         <div className="card">
           <h2 className="card-title" style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>
             Resumen por Campaña
           </h2>
 
-          {resultadosCampañas.length === 0 ? (
+          {resultadosCampanas.length === 0 ? (
             <div className="alert alert-info">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: '20px', height: '20px' }}>
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
@@ -359,9 +376,9 @@ function Dashboard({ token }) {
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '1.5rem' }}>
-              {resultadosCampañas.map((campaña, index) => {
-                const totalVotosGeneral = resultadosCampañas.reduce((sum, c) => sum + parseInt(c.total_votos || 0), 0)
-                const porcentajeGeneral = calcularPorcentaje(campaña.total_votos, totalVotosGeneral)
+              {resultadosCampanas.map((campana, index) => {
+                const totalVotosGeneral = resultadosCampanas.reduce((sum, c) => sum + parseInt(c.total_votos || 0), 0)
+                const porcentajeGeneral = calcularPorcentaje(campana.total_votos, totalVotosGeneral)
 
                 return (
                   <div 
@@ -370,8 +387,8 @@ function Dashboard({ token }) {
                       padding: '1.5rem',
                       borderRadius: 'var(--border-radius)',
                       border: '2px solid var(--bg-tertiary)',
-                      borderLeft: `6px solid ${campaña.campaña_color || '#3B82F6'}`,
-                      background: `linear-gradient(135deg, ${campaña.campaña_color}10 0%, transparent 100%)`,
+                      borderLeft: `6px solid ${campana.campana_color || '#3B82F6'}`,
+                      background: `linear-gradient(135deg, ${campana.campana_color}10 0%, transparent 100%)`,
                       transition: 'transform 0.2s ease, box-shadow 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
@@ -388,23 +405,23 @@ function Dashboard({ token }) {
                         <h3 style={{ 
                           fontSize: '1.5rem', 
                           fontWeight: '700', 
-                          color: campaña.campaña_color || 'var(--text-primary)',
+                          color: campana.campana_color || 'var(--text-primary)',
                           marginBottom: '0.5rem'
                         }}>
-                          {campaña.campaña}
+                          {campana.campana}
                         </h3>
                         <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                          <span>👥 {campaña.total_candidatos} candidatos</span>
+                          <span>👥 {campana.total_candidatos} candidatos</span>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ 
                           fontSize: '2.5rem', 
                           fontWeight: '700', 
-                          color: campaña.campaña_color || 'var(--primary)',
+                          color: campana.campana_color || 'var(--primary)',
                           lineHeight: '1'
                         }}>
-                          {campaña.total_votos}
+                          {campana.total_votos}
                         </div>
                         <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
                           votos totales
@@ -418,7 +435,7 @@ function Dashboard({ token }) {
                         <span style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
                           Participación en votos totales
                         </span>
-                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: campaña.campaña_color || 'var(--primary)' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: campana.campana_color || 'var(--primary)' }}>
                           {porcentajeGeneral}%
                         </span>
                       </div>
@@ -432,7 +449,7 @@ function Dashboard({ token }) {
                         <div style={{ 
                           width: `${porcentajeGeneral}%`, 
                           height: '100%', 
-                          background: `linear-gradient(90deg, ${campaña.campaña_color || 'var(--primary)'} 0%, ${campaña.campaña_color || 'var(--primary)'}CC 100%)`,
+                          background: `linear-gradient(90deg, ${campana.campana_color || 'var(--primary)'} 0%, ${campana.campana_color || 'var(--primary)'}CC 100%)`,
                           transition: 'width 0.5s ease'
                         }}></div>
                       </div>

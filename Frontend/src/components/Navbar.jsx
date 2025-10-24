@@ -1,13 +1,27 @@
+// Frontend/src/components/Navbar.jsx
 import { Link, useLocation } from 'react-router-dom'
 import '../App.css'
 
 function Navbar({ user, onLogout }) {
   const location = useLocation()
 
+  // Función para verificar si la ruta está activa
+  const isActiveRoute = (path) => {
+    if (path === '/campanas') {
+      // Activa si estamos en /campanas o /campana/:id
+      return location.pathname === '/campanas' || 
+             location.pathname.startsWith('/campana/')
+    }
+    return location.pathname === path
+  }
+
   return (
     <nav className="navbar">
       <div className="navbar-content">
-        <Link to="/campañas" className="navbar-brand">
+        {/* ========================================
+            LOGO Y MARCA
+        ======================================== */}
+        <Link to="/campanas" className="navbar-brand">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             fill="none" 
@@ -24,10 +38,15 @@ function Navbar({ user, onLogout }) {
           <span>Colegio de Ingenieros GT</span>
         </Link>
 
+        {/* ========================================
+            MENÚ DE NAVEGACIÓN
+        ======================================== */}
         <div className="navbar-menu">
+          
+          {/* Link a Campañas - SIN Ñ */}
           <Link 
-            to="/campañas" 
-            className={`navbar-link ${location.pathname === '/campañas' || location.pathname.startsWith('/campaña/') ? 'active' : ''}`}
+            to="/campanas" 
+            className={`navbar-link ${isActiveRoute('/campanas') ? 'active' : ''}`}
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -46,9 +65,10 @@ function Navbar({ user, onLogout }) {
             Campañas
           </Link>
 
+          {/* Link a Dashboard/Resultados */}
           <Link 
             to="/dashboard" 
-            className={`navbar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
+            className={`navbar-link ${isActiveRoute('/dashboard') ? 'active' : ''}`}
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -67,6 +87,9 @@ function Navbar({ user, onLogout }) {
             Resultados
           </Link>
 
+          {/* ========================================
+              INFORMACIÓN DEL USUARIO
+          ======================================== */}
           <div className="navbar-user">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -85,7 +108,14 @@ function Navbar({ user, onLogout }) {
             <span>{user?.nombre?.split(' ')[0] || 'Ingeniero'}</span>
           </div>
 
-          <button onClick={onLogout} className="btn-logout">
+          {/* ========================================
+              BOTÓN DE LOGOUT
+          ======================================== */}
+          <button 
+            onClick={onLogout} 
+            className="btn-logout"
+            title="Cerrar sesión"
+          >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
               fill="none" 

@@ -1,12 +1,17 @@
+// Frontend/src/App.jsx - VERSIÓN CORREGIDA
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+
+// Componentes
 import Navbar from './components/Navbar'
+
+// Páginas
 import Login from './pages/Login'
 import Register from './pages/Register'
-import CampañasList from './pages/CampañasList'
-import CampañaDetalle from './pages/CampañaDetalle'
-import Dashboard from './pages/Dashboard'
+import CampañasList from './pages/CampañasList'  // ✅ CON Ñ en el import
+import CampañaDetalle from './pages/CampañaDetalle'  // ✅ CON Ñ en el import
+import Dashboard from './pages/dashboard'  // ✅ Capitalizado
 
 function App() {
   const [token, setToken] = useState(null)
@@ -22,8 +27,9 @@ function App() {
       try {
         setToken(storedToken)
         setUser(JSON.parse(storedUser))
+        console.log('✅ Sesión recuperada:', JSON.parse(storedUser).nombre)
       } catch (error) {
-        console.error('Error al parsear usuario:', error)
+        console.error('❌ Error al parsear usuario:', error)
         localStorage.removeItem('token')
         localStorage.removeItem('user')
       }
@@ -34,6 +40,7 @@ function App() {
 
   // Función para manejar el logout
   const handleLogout = () => {
+    console.log('👋 Cerrando sesión...')
     setToken(null)
     setUser(null)
     localStorage.removeItem('token')
@@ -43,9 +50,16 @@ function App() {
   // Mostrar spinner mientras verifica la sesión
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        background: 'var(--bg-primary)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Cargando aplicación...</p>
         </div>
       </div>
     )
@@ -58,24 +72,33 @@ function App() {
         {token && user && <Navbar user={user} onLogout={handleLogout} />}
         
         <Routes>
-          {/* Rutas públicas (Login y Registro) */}
+          {/* ========================================
+              RUTAS PÚBLICAS (Sin autenticación)
+          ======================================== */}
+          
+          {/* Login */}
           <Route 
             path="/" 
             element={
-              token ? <Navigate to="/campañas" replace /> : <Login setToken={setToken} setUser={setUser} />
+              token ? <Navigate to="/campanas" replace /> : <Login setToken={setToken} setUser={setUser} />
             } 
           />
           
+          {/* Registro */}
           <Route 
             path="/register" 
             element={
-              token ? <Navigate to="/campañas" replace /> : <Register />
+              token ? <Navigate to="/campanas" replace /> : <Register />
             } 
           />
           
-          {/* Rutas protegidas */}
+          {/* ========================================
+              RUTAS PROTEGIDAS (Requieren autenticación)
+          ======================================== */}
+          
+          {/* Lista de Campañas - SIN Ñ en la URL */}
           <Route 
-            path="/campañas" 
+            path="/campanas" 
             element={
               token ? (
                 <CampañasList token={token} user={user} />
@@ -85,8 +108,9 @@ function App() {
             } 
           />
           
+          {/* Detalle de Campaña - SIN Ñ en la URL */}
           <Route 
-            path="/campaña/:id" 
+            path="/campana/:id" 
             element={
               token ? (
                 <CampañaDetalle token={token} user={user} />
@@ -96,17 +120,7 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/votacion" 
-            element={
-              token ? (
-                <Navigate to="/campañas" replace />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            } 
-          />
-          
+          {/* Dashboard de Resultados */}
           <Route 
             path="/dashboard" 
             element={
@@ -118,10 +132,35 @@ function App() {
             } 
           />
           
-          {/* Ruta por defecto - redirección */}
+          {/* ========================================
+              RUTAS LEGACY (Compatibilidad)
+          ======================================== */}
+          
+          {/* Ruta antigua con Ñ - Redirige a sin Ñ */}
+          <Route 
+            path="/campañas" 
+            element={<Navigate to="/campanas" replace />}
+          />
+          
+          {/* Ruta antigua detalle con Ñ - Redirige a sin Ñ */}
+          <Route 
+            path="/campaña/:id" 
+            element={<Navigate to="/campana/:id" replace />}
+          />
+          
+          {/* Ruta antigua de votación - Redirige a campañas */}
+          <Route 
+            path="/votacion" 
+            element={<Navigate to="/campanas" replace />}
+          />
+          
+          {/* ========================================
+              RUTA POR DEFECTO (404)
+          ======================================== */}
+          
           <Route 
             path="*" 
-            element={<Navigate to={token ? "/campañas" : "/"} replace />} 
+            element={<Navigate to={token ? "/campanas" : "/"} replace />} 
           />
         </Routes>
       </div>

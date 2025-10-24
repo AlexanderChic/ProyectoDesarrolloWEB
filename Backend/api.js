@@ -1,3 +1,4 @@
+// Backend/api.js - VERSIÓN COMPLETA Y CORREGIDA
 import express from 'express';
 import cors from 'cors';
 import pg from 'pg';
@@ -22,7 +23,10 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'votaciones_colegio',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '1234'
+  password: process.env.DB_PASSWORD || '1234',
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 pool.connect()
@@ -176,10 +180,9 @@ app.post('/auth/login', async (req, res) => {
 });
 
 // ============================================
-// RUTAS DE CAMPAÑAS
+// RUTAS DE CAMPAÑAS (SIN Ñ EN LA URL)
 // ============================================
 
-// ✅ Obtener todas las campañas
 app.get('/campanas', async (req, res) => {
   try {
     console.log('📊 Obteniendo campañas...');
@@ -232,7 +235,6 @@ app.get('/campanas', async (req, res) => {
   }
 });
 
-// ✅ Obtener detalles de una campaña específica
 app.get('/campanas/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -266,7 +268,6 @@ app.get('/campanas/:id', async (req, res) => {
 
     const campana = campanaResult.rows[0];
 
-    // Candidatos de la campaña agrupados por cargo
     const candidatosResult = await pool.query(`
       SELECT 
         c.id,
@@ -288,7 +289,6 @@ app.get('/campanas/:id', async (req, res) => {
       ORDER BY cd.orden ASC, c.numero_orden ASC
     `, [id]);
 
-    // Agrupar candidatos por cargo
     const candidatosPorCargo = {};
     candidatosResult.rows.forEach(candidato => {
       const cargoKey = candidato.cargo_id;
@@ -313,13 +313,11 @@ app.get('/campanas/:id', async (req, res) => {
 
     const cargos = Object.values(candidatosPorCargo).sort((a, b) => a.cargo_orden - b.cargo_orden);
 
-    // Verificar si está activa
     const ahora = new Date();
     const esta_activa = campana.fecha_inicio && campana.fecha_fin &&
                        ahora >= new Date(campana.fecha_inicio) && 
                        ahora <= new Date(campana.fecha_fin);
 
-    // Calcular tiempo restante
     let tiempoRestante = null;
     if (campana.fecha_fin) {
       const fin = new Date(campana.fecha_fin);
@@ -347,40 +345,57 @@ app.get('/campanas/:id', async (req, res) => {
   }
 });
 
-// Obtener votos disponibles
 app.get('/campanas/:id/votos-disponibles', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
     const ingeniero_id = req.ingeniero.id;
+    const MAX_VOTOS = 7;
 
-    const resultado = await pool.query(`
+    // ✅ Verificar estado de la campaña
+    const campanaResult = await pool.query(`
       SELECT 
-        c.votos_por_votante,
-        COALESCE(COUNT(v.id), 0) as votos_emitidos,
-        c.votos_por_votante - COALESCE(COUNT(v.id), 0) as votos_restantes,
         CASE 
-          WHEN c.fecha_inicio IS NULL OR c.fecha_fin IS NULL THEN FALSE
-          WHEN NOW() BETWEEN c.fecha_inicio AND c.fecha_fin THEN TRUE
+          WHEN fecha_inicio IS NULL OR fecha_fin IS NULL THEN FALSE
+          WHEN NOW() BETWEEN fecha_inicio AND fecha_fin THEN TRUE
           ELSE FALSE
         END as puede_votar
-      FROM campañas c
-      LEFT JOIN votos v ON v.campaña_id = c.id AND v.ingeniero_id = $1
-      WHERE c.id = $2
-      GROUP BY c.id, c.votos_por_votante, c.fecha_inicio, c.fecha_fin
-    `, [ingeniero_id, id]);
+      FROM campañas
+      WHERE id = $1
+    `, [id]);
 
-    if (resultado.rows.length === 0) {
+    if (campanaResult.rows.length === 0) {
       return res.status(404).json({ message: 'Campaña no encontrada' });
     }
 
-    res.json(resultado.rows[0]);
+    // ✅ Contar votos TOTALES (no solo en esta campaña)
+    const votosResult = await pool.query(`
+      SELECT 
+        COUNT(*) as votos_emitidos,
+        array_agg(DISTINCT cargo_id) as cargos_votados
+      FROM votos
+      WHERE ingeniero_id = $1
+    `, [ingeniero_id]);
+
+    const votos_emitidos = parseInt(votosResult.rows[0].votos_emitidos);
+    const votos_restantes = MAX_VOTOS - votos_emitidos;
+    const cargos_votados = votosResult.rows[0].cargos_votados || [];
+
+    res.json({
+      votos_emitidos,
+      votos_restantes,
+      total_votos_permitidos: MAX_VOTOS,
+      cargos_votados,
+      puede_votar: campanaResult.rows[0].puede_votar && votos_restantes > 0
+    });
   } catch (error) {
     console.error('❌ Error al obtener votos disponibles:', error);
-    res.status(500).json({ message: 'Error al obtener votos disponibles', error: error.message });
+    res.status(500).json({ 
+      message: 'Error al obtener votos disponibles', 
+      error: error.message 
+    });
   }
 });
 
-// Obtener resultados
 app.get('/campanas/:id/resultados', async (req, res) => {
   try {
     const { id } = req.params;
@@ -412,7 +427,40 @@ app.get('/campanas/:id/resultados', async (req, res) => {
   }
 });
 
-// Crear nueva campaña
+
+app.get('/mis-votos', verificarToken, async (req, res) => {
+  try {
+    const ingeniero_id = req.ingeniero.id;
+    
+    const resultado = await pool.query(
+      `SELECT 
+        v.*, 
+        c.nombre as candidato, 
+        cd.nombre as cargo,
+        cd.orden as cargo_orden,
+        cd.id as cargo_id,
+        camp.nombre as campana,
+        camp.color as campana_color,
+        camp.titulo as campana_titulo
+       FROM votos v
+       JOIN candidatos c ON v.candidato_id = c.id
+       JOIN cargos_directiva cd ON v.cargo_id = cd.id
+       LEFT JOIN campañas camp ON v.campaña_id = camp.id
+       WHERE v.ingeniero_id = $1
+       ORDER BY cd.orden ASC`,
+      [ingeniero_id]
+    );
+    
+    res.json(resultado.rows);
+  } catch (error) {
+    console.error('Error al obtener mis votos:', error);
+    res.status(500).json({ 
+      message: 'Error al obtener mis votos', 
+      error: error.message 
+    });
+  }
+});
+
 app.post('/campanas', verificarToken, async (req, res) => {
   const { 
     titulo, nombre, descripcion, color, logo_url, 
@@ -438,7 +486,6 @@ app.post('/campanas', verificarToken, async (req, res) => {
   }
 });
 
-// Actualizar estado
 app.put('/campanas/:id/estado', verificarToken, async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
@@ -461,10 +508,9 @@ app.put('/campanas/:id/estado', verificarToken, async (req, res) => {
 });
 
 // ============================================
-// CARGOS, CANDIDATOS, VOTOS, REPORTES
+// CARGOS, CANDIDATOS, VOTOS
 // ============================================
 
-// CARGOS
 app.get('/cargos', async (req, res) => {
   try {
     const resultado = await pool.query(
@@ -492,7 +538,6 @@ app.post('/cargos', verificarToken, async (req, res) => {
   }
 });
 
-// CANDIDATOS
 app.get('/candidatos/cargo/:cargo_id', async (req, res) => {
   try {
     const resultado = await pool.query(
@@ -528,7 +573,6 @@ app.post('/candidatos', verificarToken, async (req, res) => {
   }
 });
 
-// VOTOS
 app.post('/votos', verificarToken, async (req, res) => {
   const { candidato_id, cargo_id, campana_id } = req.body;
   const ingeniero_id = req.ingeniero.id;
@@ -538,7 +582,7 @@ app.post('/votos', verificarToken, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Verificar si la campaña está activa
+    // ✅ Verificar si la campaña está activa
     const campanaActiva = await client.query(`
       SELECT 
         CASE 
@@ -557,40 +601,36 @@ app.post('/votos', verificarToken, async (req, res) => {
       });
     }
 
-    // Verificar votos disponibles
-    const votosDisponibles = await client.query(`
-      SELECT 
-        c.votos_por_votante,
-        COALESCE(COUNT(v.id), 0) as votos_emitidos
-      FROM campañas c
-      LEFT JOIN votos v ON v.campaña_id = c.id AND v.ingeniero_id = $1
-      WHERE c.id = $2
-      GROUP BY c.id, c.votos_por_votante
-    `, [ingeniero_id, campana_id]);
-
-    const { votos_por_votante, votos_emitidos } = votosDisponibles.rows[0];
-
-    if (parseInt(votos_emitidos) >= votos_por_votante) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ 
-        message: 'Ya has utilizado todos tus votos en esta campaña' 
-      });
-    }
-
-    // Verificar si ya votó en este cargo
-    const votoExistente = await client.query(
-      'SELECT * FROM votos WHERE ingeniero_id = $1 AND cargo_id = $2 AND campaña_id = $3',
-      [ingeniero_id, cargo_id, campana_id]
+    // ✅ NUEVO: Verificar si ya votó en este CARGO (sin importar campaña)
+    const votoExistenteCargo = await client.query(
+      'SELECT * FROM votos WHERE ingeniero_id = $1 AND cargo_id = $2',
+      [ingeniero_id, cargo_id]
     );
 
-    if (votoExistente.rows.length > 0) {
+    if (votoExistenteCargo.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ 
-        message: 'Ya has votado en este cargo para esta campaña' 
+        message: 'Ya has votado en este cargo. Solo puedes votar una vez por cada cargo.' 
       });
     }
 
-    // Obtener datos del ingeniero
+    // ✅ NUEVO: Contar cuántos votos ha emitido EN TOTAL (no por campaña)
+    const votosEmitidosTotal = await client.query(
+      'SELECT COUNT(*) as total FROM votos WHERE ingeniero_id = $1',
+      [ingeniero_id]
+    );
+
+    const totalVotos = parseInt(votosEmitidosTotal.rows[0].total);
+    const MAX_VOTOS = 7; // 7 cargos diferentes
+
+    if (totalVotos >= MAX_VOTOS) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        message: 'Ya has utilizado todos tus votos (máximo 7 votos)' 
+      });
+    }
+
+    // ✅ Obtener datos del ingeniero
     const ingeniero = await client.query(
       'SELECT departamento_id, municipio_id FROM ingenieros_colegiados WHERE id = $1',
       [ingeniero_id]
@@ -598,7 +638,7 @@ app.post('/votos', verificarToken, async (req, res) => {
 
     const { departamento_id, municipio_id } = ingeniero.rows[0];
 
-    // Registrar el voto
+    // ✅ Registrar el voto
     const resultado = await client.query(
       `INSERT INTO votos 
        (ingeniero_id, candidato_id, cargo_id, campaña_id, departamento_id, municipio_id) 
@@ -607,18 +647,11 @@ app.post('/votos', verificarToken, async (req, res) => {
       [ingeniero_id, candidato_id, cargo_id, campana_id, departamento_id, municipio_id]
     );
 
-    // Verificar votos restantes
-    const votosRestantes = await client.query(`
-      SELECT 
-        c.votos_por_votante - COALESCE(COUNT(v.id), 0) as restantes
-      FROM campañas c
-      LEFT JOIN votos v ON v.campaña_id = c.id AND v.ingeniero_id = $1
-      WHERE c.id = $2
-      GROUP BY c.id, c.votos_por_votante
-    `, [ingeniero_id, campana_id]);
+    // ✅ NUEVO: Calcular votos restantes globales
+    const votosRestantes = MAX_VOTOS - (totalVotos + 1);
+    const completoVotacion = votosRestantes === 0;
 
-    const completoVotacion = votosRestantes.rows[0].restantes === 0;
-
+    // ✅ Si completó los 7 votos, marcar ha_votado = true
     if (completoVotacion) {
       await client.query(
         'UPDATE ingenieros_colegiados SET ha_votado = true WHERE id = $1',
@@ -631,16 +664,64 @@ app.post('/votos', verificarToken, async (req, res) => {
     res.status(201).json({
       message: 'Voto registrado exitosamente',
       voto: resultado.rows[0],
-      votos_restantes: votosRestantes.rows[0].restantes,
+      votos_restantes: votosRestantes,
+      votos_emitidos: totalVotos + 1,
+      total_votos_permitidos: MAX_VOTOS,
       completo: completoVotacion
     });
 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error al registrar voto:', error);
+    
+    // ✅ Mensaje de error específico para violación de constraint único
+    if (error.code === '23505') { // Código de PostgreSQL para unique violation
+      return res.status(400).json({ 
+        message: 'Ya has votado en este cargo' 
+      });
+    }
+    
     res.status(500).json({ message: 'Error al registrar voto', error: error.message });
   } finally {
     client.release();
+  }
+});
+
+// ============================================
+// NUEVA RUTA: Obtener votos disponibles GLOBALES
+// ============================================
+
+app.get('/votos-disponibles', verificarToken, async (req, res) => {
+  try {
+    const ingeniero_id = req.ingeniero.id;
+    const MAX_VOTOS = 7;
+
+    // Contar votos emitidos EN TOTAL
+    const resultado = await pool.query(`
+      SELECT 
+        COUNT(*) as votos_emitidos,
+        array_agg(DISTINCT cargo_id) as cargos_votados
+      FROM votos
+      WHERE ingeniero_id = $1
+    `, [ingeniero_id]);
+
+    const votos_emitidos = parseInt(resultado.rows[0].votos_emitidos);
+    const votos_restantes = MAX_VOTOS - votos_emitidos;
+    const cargos_votados = resultado.rows[0].cargos_votados || [];
+
+    res.json({
+      votos_emitidos,
+      votos_restantes,
+      total_votos_permitidos: MAX_VOTOS,
+      cargos_votados,
+      puede_votar: votos_restantes > 0
+    });
+  } catch (error) {
+    console.error('❌ Error al obtener votos disponibles:', error);
+    res.status(500).json({ 
+      message: 'Error al obtener votos disponibles', 
+      error: error.message 
+    });
   }
 });
 
@@ -694,7 +775,10 @@ app.get('/votos/ingeniero/:ingeniero_id/campana/:campana_id', verificarToken, as
   }
 });
 
+// ============================================
 // REPORTES
+// ============================================
+
 app.get('/reportes/estadisticas', async (req, res) => {
   try {
     const ingenieros = await pool.query(`
@@ -779,7 +863,10 @@ app.get('/reportes/resultados-por-campana', async (req, res) => {
   }
 });
 
+// ============================================
 // DEPARTAMENTOS Y MUNICIPIOS
+// ============================================
+
 app.get('/departamentos', async (req, res) => {
   try {
     const resultado = await pool.query('SELECT * FROM departamentos ORDER BY nombre ASC');
@@ -803,7 +890,10 @@ app.get('/municipios/departamento/:departamento_id', async (req, res) => {
   }
 });
 
+// ============================================
 // TESTING
+// ============================================
+
 app.get('/test/db-connection', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW()');
@@ -829,11 +919,46 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`📊 Sistema de Votación con Campañas - Colegio de Ingenieros`);
   console.log(`🌐 API disponible en: http://localhost:${PORT}`);
-  console.log(`✅ Endpoints actualizados sin caracteres especiales en URLs`);
+  console.log(`✅ Rutas sin caracteres especiales (ñ) en las URLs`);
+  console.log(`\n📋 RUTAS PRINCIPALES:`);
+  console.log(`   GET  /campanas                              - Listar campañas`);
+  console.log(`   GET  /campanas/:id                          - Detalles de campaña`);
+  console.log(`   GET  /campanas/:id/votos-disponibles        - Votos disponibles`);
+  console.log(`   GET  /campanas/:id/resultados               - Resultados de campaña`);
+  console.log(`   GET  /votos/ingeniero/:id/campana/:id       - Votos por ingeniero y campaña`);
+  console.log(`   GET  /reportes/resultados-por-campana       - Resultados generales`);
 });
 
-process.on('SIGINT', async () => {
-  console.log('\n⛔ Cerrando conexión a la base de datos...');
-  await pool.end();
+// ============================================
+// MANEJO DE CIERRE GRACEFUL
+// ============================================
+
+let isShuttingDown = false;
+
+const gracefulShutdown = async (signal) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  
+  console.log(`\n⛔ Señal ${signal} recibida: Cerrando servidor...`);
+  
+  try {
+    await pool.end();
+    console.log('✅ Pool de PostgreSQL cerrado correctamente');
+  } catch (err) {
+    console.error('❌ Error al cerrar pool:', err);
+  }
+  
   process.exit(0);
+};
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
 });

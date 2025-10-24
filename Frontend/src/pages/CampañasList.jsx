@@ -71,7 +71,9 @@ function CampañasList({ token, user }) {
     return `${minutos}m restantes`
   }
 
+  // ✅ FUNCIÓN CORREGIDA: Navegación directa sin propagación
   const verDetallesCampana = (campana_id) => {
+    console.log('🔍 Navegando a campaña ID:', campana_id);
     navigate(`/campana/${campana_id}`)
   }
 
@@ -139,8 +141,9 @@ function CampañasList({ token, user }) {
                     background: `linear-gradient(135deg, ${campana.color}08 0%, transparent 100%)`,
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    opacity: puedeVotar ? 1 : 0.7
+                    opacity: 1
                   }}
+                  // ✅ CORRECCIÓN: onClick solo en el contenedor si quieres que todo sea clickeable
                   onClick={() => verDetallesCampana(campana.campana_id)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-4px)'
@@ -269,19 +272,15 @@ function CampañasList({ token, user }) {
                         color: puedeVotar ? 'white' : 'var(--text-secondary)',
                         fontWeight: '700',
                         fontSize: '1rem',
-                        cursor: puedeVotar ? 'pointer' : 'not-allowed',
+                        cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.5rem'
                       }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (puedeVotar) {
-                          verDetallesCampana(campana.campana_id)
-                        }
-                      }}
+                      // ✅ CORRECCIÓN: Eliminar el onClick del botón para evitar doble navegación
+                      // El onClick del contenedor padre ya maneja la navegación
                       onMouseEnter={(e) => {
                         if (puedeVotar) {
                           e.currentTarget.style.transform = 'scale(1.02)'

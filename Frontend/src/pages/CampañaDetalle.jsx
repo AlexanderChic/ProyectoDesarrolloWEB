@@ -22,22 +22,21 @@ function CampañaDetalle({ token, user }) {
   const [tiempoRestante, setTiempoRestante] = useState(null)
 
   useEffect(() => {
-    if (!token) {
-      navigate('/')
-      return
-    }
-    cargarDatosCampana()
-    cargarMisVotos()
+  if (!token) {
+    navigate('/')
+    return
+  }
+  cargarDatosCampana()
+  cargarMisVotos() // ✅ Ahora carga TODOS los votos, no solo de esta campaña
+  cargarResultados()
+  
+  const interval = setInterval(() => {
     cargarResultados()
-    
-    // Actualizar resultados cada 5 segundos
-    const interval = setInterval(() => {
-      cargarResultados()
-      cargarDatosCampana()
-    }, 5000)
-    
-    return () => clearInterval(interval)
-  }, [id, token])
+    cargarDatosCampana()
+  }, 5000)
+  
+  return () => clearInterval(interval)
+}, [id, token])
 
   // Contador de tiempo restante
   useEffect(() => {
@@ -87,18 +86,18 @@ function CampañaDetalle({ token, user }) {
     }
   }
 
-  const cargarMisVotos = async () => {
-    try {
-      // ✅ URL sin ñ
-      const response = await fetch(`${API_URL}/votos/ingeniero/${user.id}/campana/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      setMisVotos(data)
-    } catch (err) {
-      console.error('Error al cargar mis votos:', err)
-    }
+const cargarMisVotos = async () => {
+  try {
+    // ✅ CAMBIO: Obtener TODOS los votos del usuario (no solo de esta campaña)
+    const response = await fetch(`${API_URL}/mis-votos`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    const data = await response.json()
+    setMisVotos(data)
+  } catch (err) {
+    console.error('Error al cargar mis votos:', err)
   }
+}
 
   const cargarResultados = async () => {
     try {
@@ -187,8 +186,12 @@ function CampañaDetalle({ token, user }) {
   }
 
   const yaVoto = (cargoId) => {
-    return misVotos.some(voto => voto.cargo_id === cargoId)
-  }
+  return misVotos.some(voto => voto.cargo_id === cargoId)
+}
+
+const yaVotoEnEstaCampana = (cargoId) => {
+  return misVotos.some(voto => voto.cargo_id === cargoId && voto.campaña_id === parseInt(id))
+}
 
   if (loading) {
     return (
@@ -226,7 +229,7 @@ function CampañaDetalle({ token, user }) {
       {/* Header de la campaña */}
       <div className="card" style={{
         borderLeft: `6px solid ${campana.color}`,
-        background: `linear-gradient(135deg, ${campana.color}08 0%, transparent 100%)`
+        background: `linear-gradient(135deg, ${campana.color}100 0%, transparent 100%)`
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
           <div style={{ flex: 1 }}>
@@ -399,103 +402,127 @@ function CampañaDetalle({ token, user }) {
 
                 <div style={{ display: 'grid', gap: '1rem' }}>
                   {cargo.candidatos.map((candidato) => {
-                    const seleccionado = candidatoSeleccionado === candidato.id
-                    const deshabilitado = !puedeVotar || votoEmitido
+  const seleccionado = candidatoSeleccionado === candidato.id
+  const yaVotoEnCargo = yaVoto(cargo.cargo_id) // ✅ Ya votó en este cargo en cualquier campaña
+  const esVotoDeEstaCampana = yaVotoEnEstaCampana(cargo.cargo_id) // ✅ Votó en esta campaña
+  const deshabilitado = !puedeVotar || (yaVotoEnCargo && !esVotoDeEstaCampana)
 
-                    return (
-                      <div
-                        key={candidato.id}
-                        onClick={() => !deshabilitado && seleccionarCandidato(cargo.cargo_id, candidato.id)}
-                        style={{
-                          padding: '1.5rem',
-                          borderRadius: 'var(--border-radius)',
-                          border: seleccionado ? `3px solid ${campana.color}` : '2px solid var(--bg-tertiary)',
-                          background: seleccionado ? `${campana.color}10` : 'var(--bg-secondary)',
-                          cursor: deshabilitado ? 'not-allowed' : 'pointer',
-                          opacity: deshabilitado ? 0.6 : 1,
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '1.5rem'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!deshabilitado) {
-                            e.currentTarget.style.transform = 'translateY(-2px)'
-                            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)'
-                          e.currentTarget.style.boxShadow = 'none'
-                        }}
-                      >
-                        {/* Foto del candidato */}
-                        <div style={{
-                          width: '80px',
-                          height: '80px',
-                          borderRadius: '50%',
-                          background: candidato.foto_url 
-                            ? `url(${candidato.foto_url}) center/cover` 
-                            : `linear-gradient(135deg, ${campana.color} 0%, ${campana.color}CC 100%)`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '2rem',
-                          fontWeight: '700',
-                          flexShrink: 0,
-                          border: seleccionado ? `4px solid ${campana.color}` : 'none'
-                        }}>
-                          {!candidato.foto_url && candidato.nombre.charAt(0)}
-                        </div>
+  return (
+    <div
+      key={candidato.id}
+      onClick={() => !deshabilitado && seleccionarCandidato(cargo.cargo_id, candidato.id)}
+      style={{
+        padding: '1.5rem',
+        borderRadius: 'var(--border-radius)',
+        border: seleccionado ? `3px solid ${campana.color}` : '2px solid var(--bg-tertiary)',
+        background: seleccionado 
+          ? `${campana.color}10` 
+          : yaVotoEnCargo 
+            ? 'var(--bg-tertiary)' 
+            : 'var(--bg-secondary)',
+        cursor: deshabilitado ? 'not-allowed' : 'pointer',
+        opacity: deshabilitado ? 0.6 : 1,
+        transition: 'all 0.3s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1.5rem',
+        position: 'relative'
+      }}
+      onMouseEnter={(e) => {
+        if (!deshabilitado) {
+          e.currentTarget.style.transform = 'translateY(-2px)'
+          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'none'
+      }}
+    >
+      {/* ✅ NUEVO: Indicador de voto en otro lado */}
+      {yaVotoEnCargo && !esVotoDeEstaCampana && (
+        <div style={{
+          position: 'absolute',
+          top: '0.5rem',
+          right: '0.5rem',
+          padding: '0.25rem 0.75rem',
+          borderRadius: '9999px',
+          background: '#F59E0B20',
+          color: '#F59E0B',
+          fontSize: '0.75rem',
+          fontWeight: '700'
+        }}>
+          ✓ Ya votaste en este cargo
+        </div>
+      )}
 
-                        {/* Información del candidato */}
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{ 
-                            fontSize: '1.25rem', 
-                            fontWeight: '700', 
-                            color: 'var(--text-primary)',
-                            marginBottom: '0.5rem'
-                          }}>
-                            {candidato.nombre}
-                          </h3>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                              📋 Colegiado: <strong>{candidato.numero_colegiado}</strong>
-                            </span>
-                            {candidato.especialidad && (
-                              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                🎓 {candidato.especialidad}
-                              </span>
-                            )}
-                            {!puedeVotar && (
-                              <span style={{ fontSize: '0.9rem', color: campana.color, marginTop: '0.5rem' }}>
-                                📊 {candidato.total_votos} votos
-                              </span>
-                            )}
-                          </div>
-                        </div>
+      {/* Foto del candidato */}
+      <div style={{
+        width: '80px',
+        height: '80px',
+        borderRadius: '50%',
+        background: candidato.foto_url 
+          ? `url(${candidato.foto_url}) center/cover` 
+          : `linear-gradient(135deg, ${campana.color} 0%, ${campana.color}CC 100%)`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontSize: '2rem',
+        fontWeight: '700',
+        flexShrink: 0,
+        border: seleccionado ? `4px solid ${campana.color}` : 'none'
+      }}>
+        {!candidato.foto_url && candidato.nombre.charAt(0)}
+      </div>
 
-                        {/* Indicador de selección */}
-                        {seleccionado && (
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: campana.color,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
-                          }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style={{ width: '24px', height: '24px' }}>
-                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+      {/* Información del candidato */}
+      <div style={{ flex: 1 }}>
+        <h3 style={{ 
+          fontSize: '1.25rem', 
+          fontWeight: '700', 
+          color: 'var(--text-primary)',
+          marginBottom: '0.5rem'
+        }}>
+          {candidato.nombre}
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            📋 Colegiado: <strong>{candidato.numero_colegiado}</strong>
+          </span>
+          {candidato.especialidad && (
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              🎓 {candidato.especialidad}
+            </span>
+          )}
+          {!puedeVotar && (
+            <span style={{ fontSize: '0.9rem', color: campana.color, marginTop: '0.5rem' }}>
+              📊 {candidato.total_votos} votos
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Indicador de selección */}
+      {seleccionado && (
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: campana.color,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" style={{ width: '24px', height: '24px' }}>
+            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+          </svg>
+        </div>
+      )}
+    </div>
+  )
+})}
                 </div>
               </div>
             )
@@ -614,41 +641,84 @@ function CampañaDetalle({ token, user }) {
 
       {/* Mis votos emitidos */}
       {misVotos.length > 0 && (
-        <div className="card">
-          <h2 className="card-title" style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>
-            📝 Mis Votos Emitidos
-          </h2>
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {misVotos.map((voto, index) => (
-              <div
-                key={index}
-                style={{
-                  padding: '1rem',
-                  borderRadius: 'var(--border-radius)',
-                  background: 'var(--bg-secondary)',
-                  border: `2px solid ${campana.color}40`,
-                  borderLeft: `4px solid ${campana.color}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    {voto.cargo}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    Votaste por: <strong style={{ color: campana.color }}>{voto.candidato}</strong>
-                  </div>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={campana.color} style={{ width: '24px', height: '24px' }}>
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                </svg>
+  <div className="card">
+    <h2 className="card-title" style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>
+      📝 Mis Votos Emitidos ({misVotos.length}/7)
+    </h2>
+    <div style={{ display: 'grid', gap: '1rem' }}>
+      {misVotos.map((voto, index) => (
+        <div
+          key={index}
+          style={{
+            padding: '1rem',
+            borderRadius: 'var(--border-radius)',
+            background: 'var(--bg-secondary)',
+            border: `2px solid ${voto.campana_color}40`,
+            borderLeft: `4px solid ${voto.campana_color}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          <div>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              marginBottom: '0.5rem'
+            }}>
+              <div style={{ 
+                fontWeight: '700', 
+                color: 'var(--text-primary)'
+              }}>
+                {voto.cargo}
               </div>
-            ))}
+              {voto.campaña_id === parseInt(id) && (
+                <div style={{
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '9999px',
+                  background: `${campana.color}20`,
+                  color: campana.color,
+                  fontSize: '0.7rem',
+                  fontWeight: '700'
+                }}>
+                  Esta campaña
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Votaste por: <strong style={{ color: voto.campana_color }}>{voto.candidato}</strong>
+            </div>
+            <div style={{ 
+              fontSize: '0.8rem', 
+              color: 'var(--text-tertiary)',
+              marginTop: '0.25rem'
+            }}>
+              Campaña: {voto.campana}
+            </div>
           </div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill={voto.campana_color} style={{ width: '24px', height: '24px' }}>
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+          </svg>
         </div>
-      )}
+      ))}
+    </div>
+    
+    {misVotos.length < 7 && (
+      <div style={{
+        marginTop: '1rem',
+        padding: '1rem',
+        borderRadius: 'var(--border-radius)',
+        background: '#F59E0B20',
+        color: '#F59E0B',
+        textAlign: 'center',
+        fontWeight: '600'
+      }}>
+        Te quedan {7 - misVotos.length} voto(s) por emitir
+      </div>
+    )}
+  </div>
+)}
 
       {/* Resultados en tiempo real */}
       {!puedeVotar && resultados.length > 0 && (
