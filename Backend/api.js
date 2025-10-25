@@ -14,18 +14,36 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 // Middleware - CORS configurado para producción
+// Middleware - CORS configurado correctamente
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'https://tu-app.netlify.app',  // Cambiarás esto después
-        'https://*.netlify.app'
-      ]
-    : [
-        'http://localhost:5173',
-        'http://localhost:3000'
-      ],
-  credentials: true
+  origin: function(origin, callback) {
+    // Permitir requests sin origin (como Postman, apps móviles, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+      'https://votos-guate.netlify.app',  // ❌ Quitar la / final
+      'https://votosguate-api.onrender.com'
+    ];
+    
+    // Permitir todos los subdominios de netlify en desarrollo
+    const isNetlifyPreview = origin.match(/https:\/\/.*\.netlify\.app$/);
+    
+    if (allowedOrigins.includes(origin) || isNetlifyPreview) {
+      callback(null, true);
+    } else {
+      console.warn('⚠️ Origen bloqueado por CORS:', origin);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -237,8 +255,6 @@ app.get('/auth/verificar-admin', verificarToken, async (req, res) => {
 // ============================================
 // RUTAS DE CAMPAÑAS
 // ============================================
-
-// ✅ DESPUÉS (CORRECTO):
 app.get('/campanas', async (req, res) => {
   try {
     console.log('📊 Obteniendo campañas...');
