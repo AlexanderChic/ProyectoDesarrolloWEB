@@ -6,7 +6,8 @@
   "main": "api.js",
   "scripts": {
     "start": "node api.js",
-    "dev": "node --watch api.js"
+    "dev": "node --watch api.js",
+    "build": "npm rebuild bcrypt --build-from-source"
   },
   "engines": {
     "node": ">=18.0.0"
