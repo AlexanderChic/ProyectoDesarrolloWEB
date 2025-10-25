@@ -13,17 +13,29 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// Middleware - CORS configurado para producción
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        'https://tu-app.netlify.app',  // Cambiarás esto después
+        'https://*.netlify.app'
+      ]
+    : [
+        'http://localhost:5173',
+        'http://localhost:3000'
+      ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Configuración de PostgreSQL
+// Configuración de PostgreSQL - PRODUCCIÓN Y DESARROLLO
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'votaciones_colegio',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '1234',
+  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: false
+  } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

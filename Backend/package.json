@@ -8,6 +8,9 @@
     "start": "node api.js",
     "dev": "node --watch api.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
