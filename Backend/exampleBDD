@@ -144,20 +144,20 @@ CREATE TABLE public.ingenieros_colegiados (
 	numero_colegiado varchar(20) NULL,
 	fecha_nacimiento date NULL,
 	especialidad varchar(100) NULL,
+	rol varchar(20) DEFAULT 'usuario'::character varying NOT NULL,
 	CONSTRAINT ingenieros_colegiados_numero_colegiado_key UNIQUE (numero_colegiado),
+	CONSTRAINT ingenieros_colegiados_rol_check CHECK (((rol)::text = ANY ((ARRAY['usuario'::character varying, 'admin'::character varying])::text[]))),
 	CONSTRAINT usuarios_dpi_key UNIQUE (dpi),
 	CONSTRAINT usuarios_email_key UNIQUE (email),
 	CONSTRAINT usuarios_pkey PRIMARY KEY (id)
 );
+CREATE INDEX idx_ingenieros_rol ON public.ingenieros_colegiados USING btree (rol);
 
 
 -- public.ingenieros_colegiados foreign keys
 
 ALTER TABLE public.ingenieros_colegiados ADD CONSTRAINT usuarios_departamento_id_fkey FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id);
 ALTER TABLE public.ingenieros_colegiados ADD CONSTRAINT usuarios_municipio_id_fkey FOREIGN KEY (municipio_id) REFERENCES public.municipios(id);
-
-
-
 
 
 -- public.municipios definition

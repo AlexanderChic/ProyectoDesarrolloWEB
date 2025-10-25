@@ -466,7 +466,7 @@ app.get('/campanas/:id/resultados', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // CONSULTA CORREGIDA - Sin agregaciones anidadas
+    // ✅ CONSULTA CORREGIDA - Sin agregaciones anidadas
     const resultado = await pool.query(`
       SELECT 
         cd.id as cargo_id,
@@ -475,7 +475,7 @@ app.get('/campanas/:id/resultados', async (req, res) => {
         c.id as candidato_id,
         c.nombre as candidato,
         c.numero_colegiado,
-        COUNT(v.id) as total_votos
+        COALESCE(COUNT(v.id), 0) as total_votos
       FROM cargos_directiva cd
       LEFT JOIN candidatos c ON c.cargo_id = cd.id AND c.campaña_id = $1
       LEFT JOIN votos v ON v.candidato_id = c.id AND v.campaña_id = $1
@@ -524,7 +524,6 @@ app.get('/campanas/:id/resultados', async (req, res) => {
     });
   }
 });
-
 // ============================================
 // RUTAS ADMIN - CAMPAÑAS
 // ============================================
