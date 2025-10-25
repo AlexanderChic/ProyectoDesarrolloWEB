@@ -83,11 +83,9 @@ El proyecto integra **Frontend en React con SASS/SCSS** y **Backend en Node.js c
 ## Base de Datos
 - PostgreSQL con tablas principales: administradores, campañas, candidatos, cargos_directiva, ingenieros_colegiados, departamentos, municipios, votos y votos_por_campaña.
 - Conexión al servidor en Render:
-- Hostname: dpg-d3u1u8muk2gs73dhi6qg-a
 - Port: 5432
 - Database: sistema_votacion_gt
 - Username: sistema_votacion_gt_user
-- Password: CxjVWPVM2p8jXq0MGs2YFPt7v1G1xURN
 
 
 ## Enlaces de Producción
