@@ -14,36 +14,18 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 // Middleware - CORS configurado para producción
-// Middleware - CORS configurado correctamente
 app.use(cors({
-  origin: function(origin, callback) {
-    // Permitir requests sin origin (como Postman, apps móviles, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:3000',
-      'https://votos-guate.netlify.app',  // ❌ Quitar la / final
-      'https://votosguate-api.onrender.com'
-    ];
-    
-    // Permitir todos los subdominios de netlify en desarrollo
-    const isNetlifyPreview = origin.match(/https:\/\/.*\.netlify\.app$/);
-    
-    if (allowedOrigins.includes(origin) || isNetlifyPreview) {
-      callback(null, true);
-    } else {
-      console.warn('⚠️ Origen bloqueado por CORS:', origin);
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        'https://tu-app.netlify.app',  // Cambiarás esto después
+        'https://*.netlify.app'
+      ]
+    : [
+        'http://localhost:5173',
+        'http://localhost:3000'
+      ],
+  credentials: true
 }));
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -256,6 +238,7 @@ app.get('/auth/verificar-admin', verificarToken, async (req, res) => {
 // RUTAS DE CAMPAÑAS
 // ============================================
 
+// ✅ DESPUÉS (CORRECTO):
 app.get('/campanas', async (req, res) => {
   try {
     console.log('📊 Obteniendo campañas...');
@@ -283,9 +266,9 @@ app.get('/campanas', async (req, res) => {
           WHEN NOW() > c.fecha_fin THEN 'Finalizada'
           ELSE 'Inactiva'
         END as estado_actual
-      FROM campañas c
-      LEFT JOIN candidatos ca ON ca.campaña_id = c.id
-      LEFT JOIN votos v ON v.campaña_id = c.id
+      FROM "campa±as" c
+      LEFT JOIN candidatos ca ON ca.campana_id = c.id
+      LEFT JOIN votos v ON v.campana_id = c.id
       GROUP BY c.id, c.titulo, c.nombre, c.descripcion, c.color, c.logo_url, 
                c.fecha_inicio, c.fecha_fin, c.votos_por_votante, c.estado, c.fecha_creacion
       ORDER BY 
@@ -328,9 +311,9 @@ app.get('/campanas/:id', async (req, res) => {
         COUNT(DISTINCT ca.id) as total_candidatos,
         COUNT(DISTINCT v.id) as total_votos,
         COUNT(DISTINCT v.ingeniero_id) as total_votantes
-      FROM campañas c
-      LEFT JOIN candidatos ca ON ca.campaña_id = c.id
-      LEFT JOIN votos v ON v.campaña_id = c.id
+      FROM "campa±as" c
+      LEFT JOIN candidatos ca ON ca.campana_id = c.id
+      LEFT JOIN votos v ON v.campana_id = c.id
       WHERE c.id = $1
       GROUP BY c.id
     `, [id]);
@@ -355,8 +338,8 @@ app.get('/campanas/:id', async (req, res) => {
         COUNT(v.id) as total_votos
       FROM candidatos c
       JOIN cargos_directiva cd ON c.cargo_id = cd.id
-      LEFT JOIN votos v ON v.candidato_id = c.id AND v.campaña_id = $1
-      WHERE c.campaña_id = $1
+      LEFT JOIN votos v ON v.candidato_id = c.id AND v.campana_id = $1
+      WHERE c.campana_id = $1
       GROUP BY c.id, c.nombre, c.numero_colegiado, c.especialidad, 
                c.numero_orden, c.foto_url, cd.id, cd.nombre, cd.orden
       ORDER BY cd.orden ASC, c.numero_orden ASC
@@ -418,31 +401,6 @@ app.get('/campanas/:id', async (req, res) => {
   }
 });
 
-app.get('/campanas/:id/candidatos', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const resultado = await pool.query(`
-      SELECT 
-        c.*,
-        cd.nombre as cargo_nombre,
-        cd.orden as cargo_orden,
-        COUNT(v.id) as total_votos
-      FROM candidatos c
-      JOIN cargos_directiva cd ON c.cargo_id = cd.id
-      LEFT JOIN votos v ON v.candidato_id = c.id
-      WHERE c.campaña_id = $1
-      GROUP BY c.id, cd.nombre, cd.orden
-      ORDER BY cd.orden ASC, c.numero_orden ASC
-    `, [id]);
-    
-    res.json(resultado.rows);
-  } catch (error) {
-    console.error('❌ Error al obtener candidatos:', error);
-    res.status(500).json({ message: 'Error al obtener candidatos', error: error.message });
-  }
-});
-
 app.get('/campanas/:id/votos-disponibles', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -456,7 +414,7 @@ app.get('/campanas/:id/votos-disponibles', verificarToken, async (req, res) => {
           WHEN NOW() BETWEEN fecha_inicio AND fecha_fin THEN TRUE
           ELSE FALSE
         END as puede_votar
-      FROM campañas
+      FROM "campa±as"
       WHERE id = $1
     `, [id]);
 
@@ -496,7 +454,6 @@ app.get('/campanas/:id/resultados', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ CONSULTA CORREGIDA - Sin agregaciones anidadas
     const resultado = await pool.query(`
       SELECT 
         cd.id as cargo_id,
@@ -507,13 +464,12 @@ app.get('/campanas/:id/resultados', async (req, res) => {
         c.numero_colegiado,
         COALESCE(COUNT(v.id), 0) as total_votos
       FROM cargos_directiva cd
-      LEFT JOIN candidatos c ON c.cargo_id = cd.id AND c.campaña_id = $1
-      LEFT JOIN votos v ON v.candidato_id = c.id AND v.campaña_id = $1
+      LEFT JOIN candidatos c ON c.cargo_id = cd.id AND c.campana_id = $1
+      LEFT JOIN votos v ON v.candidato_id = c.id AND v.campana_id = $1
       GROUP BY cd.id, cd.nombre, cd.orden, c.id, c.nombre, c.numero_colegiado
       ORDER BY cd.orden ASC, total_votos DESC
     `, [id]);
 
-    // Agrupar resultados por cargo
     const resultadosPorCargo = {};
     
     resultado.rows.forEach(row => {
@@ -528,7 +484,6 @@ app.get('/campanas/:id/resultados', async (req, res) => {
         };
       }
       
-      // Solo agregar candidatos que existan
       if (row.candidato_id) {
         resultadosPorCargo[cargoId].candidatos.push({
           candidato_id: row.candidato_id,
@@ -539,7 +494,6 @@ app.get('/campanas/:id/resultados', async (req, res) => {
       }
     });
 
-    // Convertir a array y ordenar
     const resultadosArray = Object.values(resultadosPorCargo)
       .sort((a, b) => a.cargo_orden - b.cargo_orden);
 
